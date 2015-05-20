@@ -160,7 +160,7 @@ sub import
         no strict 'refs';
         my $stash = *{ $package . "::" };
 
-        my @their_export_oks = @{ ($stash->{EXPORT_OK} // []) };
+        my @their_export_oks = @{ ($stash->{EXPORT_OK} || []) };
         for my $export_name (@their_export_oks) {
 
             my $globref = $stash->{$export_name};
