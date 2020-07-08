@@ -123,6 +123,20 @@ sub import
         }
     }
 
+    # Pulling in B::CallChecker and/or B::Generate to optimize away
+    # the exported symbols can break test coverage metrics generated
+    # by Devel::Cover.  We probably want to check coverage on the actual
+    # exports anyway, so if Devel::Cover is in play assume we *should*
+    # export everything:
+    #
+    # (took this conditional logic directly from Devel::Cover)
+    #
+    $should_export_subs = 1 if (
+        $INC{'Devel/Cover.pm'}                                ||
+        ($ENV{HARNESS_PERL_SWITCHES} || "") =~ /Devel::Cover/ ||
+        ($ENV{PERL5OPT}              || "") =~ /Devel::Cover/
+    );
+
     # If the "if" condition is false, or the "unless" condition is true,
     # replace any exportable subs with something that will get optimized away:
     #
