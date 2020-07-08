@@ -73,7 +73,8 @@ a boolean, or a coderef that returns true/false.
 
 If the condition evaluates to true for C<-if>, or false for C<-unless>,
 then any subs are exported as-is.  Otherwise, any subs in C<@EXPORT_OK>
-are replaced with stubs that get optimized away by the compiler.
+are replaced with stubs that get optimized away by the compiler (with
+one exception - see L</CAVEATS> below).
 
 You can specify either C<-if> or C<-unless>, but not both.  Croaks if
 both are specified, or if you specify the same option more than once.
@@ -214,6 +215,19 @@ sub import
         *$symbol = $coderef;
     }
 }
+
+=head1 CAVEATS
+
+This module uses L<B::CallChecker> and L<B::Generate> under the covers
+to optimize away the exported subroutines.  Loading one or the other
+of those modules can potentially break test coverage metrics generated
+by L<Devel::Cover> in mysterious ways.
+
+To avoid this problem, subroutines are never optimized away
+if L<Devel::Cover> is in use, and are always exported as-is
+regardless of any C<-if> or C<-unless> conditions.  (You probably
+want L<Devel::Cover> to assess the coverage of your real exported
+subroutines in any case.)
 
 =head1 SEE ALSO
 
