@@ -6,34 +6,6 @@ use warnings;
 require Exporter;
 our @ISA = qw( Exporter );
 
-#------------------------------------------------------------
-#
-# This section lifted directly from Debug::Show v0.0
-#
-# https://metacpan.org/pod/Debug::Show
-#
-# Thanks to Zefram
-#
-use B::CallChecker qw( cv_set_call_checker );
-BEGIN {
-    # B::Generate provides a broken version of B::COP->warnings, which
-    # makes B::Deparse barf [rt.cpan.org #70396], and of B::SVOP->sv,
-    # which makes B::Concise emit rubbish [rt.cpan.org #70398].
-    # This works around it by restoring the non-broken versions,
-    # provided that B::Generate hasn't already been loaded.  If it
-    # was loaded by someone else, better hope they worked around it
-    # the same way.
-    require B;
-    my $cop_warnings = \&B::COP::warnings;
-    my $svop_sv = \&B::SVOP::sv;
-    require B::Generate;
-    no warnings "redefine";
-    *B::COP::warnings = $cop_warnings;
-    *B::SVOP::sv = $svop_sv;
-    B::Generate->VERSION(1.33);
-}
-#------------------------------------------------------------
-
 use Carp qw( croak );
 
 =head1 NAME
@@ -151,6 +123,20 @@ sub import
         }
     }
 
+    # Pulling in B::CallChecker and/or B::Generate to optimize away
+    # the exported symbols can break test coverage metrics generated
+    # by Devel::Cover.  We probably want to check coverage on the actual
+    # exports anyway, so if Devel::Cover is in play assume we *should*
+    # export everything:
+    #
+    # (took this conditional logic directly from Devel::Cover)
+    #
+    $should_export_subs = 1 if (
+        $INC{'Devel/Cover.pm'}                                ||
+        ($ENV{HARNESS_PERL_SWITCHES} || "") =~ /Devel::Cover/ ||
+        ($ENV{PERL5OPT}              || "") =~ /Devel::Cover/
+    );
+
     # If the "if" condition is false, or the "unless" condition is true,
     # replace any exportable subs with something that will get optimized away:
     #
@@ -171,6 +157,9 @@ sub import
                 # Save a copy of the original code:
                 $their_original_coderefs{$symbol} = \&$symbol;
 
+                require B::CallChecker;
+                require B::Generate;
+
                 # Replace the sub being imported with a void prototype sub
                 # that gets optimized away:
                 #
@@ -188,20 +177,24 @@ sub import
                     #
                     # Thanks to Zefram
                     #
-                    cv_set_call_checker(\&$symbol, sub ($$$) {
-                        my($entersubop, undef, undef) = @_;
-                        # B::Generate doesn't offer a way to explicitly free ops.
-                        # We ought to be able to implicitly free $entersubop via
-                        # constant folding, by something like
-                        #
-                        #     return B::LOGOP->new("and", 0,
-                        #         B::SVOP->new("const", 0, !1),
-                        #         $entersubop);
-                        #
-                        # but empirically that causes memory corruption and it's
-                        # not clear why.  For the time being, leak $entersubop.
-                        return B::SVOP->new("const", 0, !1);
-                    }, \!1);
+                    B::CallChecker::cv_set_call_checker(
+                        \&$symbol,
+                        sub ($$$) {
+                            my($entersubop, undef, undef) = @_;
+                            # B::Generate doesn't offer a way to explicitly free ops.
+                            # We ought to be able to implicitly free $entersubop via
+                            # constant folding, by something like
+                            #
+                            #     return B::LOGOP->new("and", 0,
+                            #         B::SVOP->new("const", 0, !1),
+                            #         $entersubop);
+                            #
+                            # but empirically that causes memory corruption and it's
+                            # not clear why.  For the time being, leak $entersubop.
+                            return B::SVOP->new("const", 0, !1);
+                        },
+                        \!1
+                    );
                     #
                     #---------------------------------------------------------
                 }
