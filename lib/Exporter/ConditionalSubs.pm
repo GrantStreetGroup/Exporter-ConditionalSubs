@@ -157,8 +157,8 @@ sub import
                 # Save a copy of the original code:
                 $their_original_coderefs{$symbol} = \&$symbol;
 
-                require 'B/CallChecker.pm';
-                require 'B/Generate.pm';
+                require B::CallChecker;
+                require B::Generate;
 
                 # Replace the sub being imported with a void prototype sub
                 # that gets optimized away:
