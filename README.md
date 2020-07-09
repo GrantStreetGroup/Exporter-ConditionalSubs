@@ -4,7 +4,7 @@ Exporter::ConditionalSubs
 
 # VERSION
 
-version v1.10.1
+version v1.11.0
 
 # SYNOPSIS
 
@@ -66,10 +66,24 @@ a boolean, or a coderef that returns true/false.
 
 If the condition evaluates to true for `-if`, or false for `-unless`,
 then any subs are exported as-is.  Otherwise, any subs in `@EXPORT_OK`
-are replaced with stubs that get optimized away by the compiler.
+are replaced with stubs that get optimized away by the compiler (with
+one exception - see ["CAVEATS"](#caveats) below).
 
 You can specify either `-if` or `-unless`, but not both.  Croaks if
 both are specified, or if you specify the same option more than once.
+
+# CAVEATS
+
+This module uses [B::CallChecker](https://metacpan.org/pod/B%3A%3ACallChecker) and [B::Generate](https://metacpan.org/pod/B%3A%3AGenerate) under the covers
+to optimize away the exported subroutines.  Loading one or the other
+of those modules can potentially break test coverage metrics generated
+by [Devel::Cover](https://metacpan.org/pod/Devel%3A%3ACover) in mysterious ways.
+
+To avoid this problem, subroutines are never optimized away
+if [Devel::Cover](https://metacpan.org/pod/Devel%3A%3ACover) is in use, and are always exported as-is
+regardless of any `-if` or `-unless` conditions.  (You probably
+want [Devel::Cover](https://metacpan.org/pod/Devel%3A%3ACover) to assess the coverage of your real exported
+subroutines in any case.)
 
 # SEE ALSO
 
