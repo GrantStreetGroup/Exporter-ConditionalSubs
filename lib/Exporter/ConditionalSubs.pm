@@ -8,17 +8,8 @@ our @ISA = qw( Exporter );
 
 use Carp qw( croak );
 
-=head1 NAME
-
-Exporter::ConditionalSubs - Conditionally export subroutines
-
-=head1 VERSION
-
-Version 1.01
-
-=cut
-
-our $VERSION = '1.01';
+# ABSTRACT: Conditionally export subroutines
+# VERSION
 
 =head1 SYNOPSIS
 
